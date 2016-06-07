@@ -1,18 +1,26 @@
 # aurelia-skeleton
-Opinionated Aurelia skeleton.
+[![Join the chat at https://gitter.im/spoonx/dev](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/spoonx/dev)
 
-Features an organized directory structure rather then a flat structure like [aurelia-skeleton-navigation](https://github.com/aurelia/skeleton-navigation).
-
-Also used for generating new projects with [Spoonx/Swan](https://github.com/SpoonX/swan-cli).
+Opinionated Aurelia skeleton for the [Swan](https://github.com/SpoonX/swan-cli) stack.
 
 ## Installing
+
+#### Using [Swan](https://github.com/SpoonX/swan-cli)
+Run `swan new <project name>` (also provides a auth server)
+
+#### Using npm and jspm
 1. Run `npm install`
 2. Run `jspm install`
 
 ## What
-The default [aurelia-skeleton-navigation](https://github.com/aurelia/skeleton-navigation) has a flat structure which can grow very large and easily becomes a mess.
+The Aurelia-skeleton features:
 
-Our Aurelia-skeleton has a directory structure that is very organized and simple to use. When bundling your application the structure will also be organized.
+- [Aurelia-authentication](https://github.com/SpoonX/aurelia-authentication)
+- [Aurelia-api](https://github.com/SpoonX/aurelia-api)
+- [Aurelia-orm](https://github.com/SpoonX/aurelia-orm)
+- [Aurelia-notification](https://github.com/SpoonX/aurelia-notification)
+- An organized directory structure (rather then flat like [skeleton-navigation](https://github.com/aurelia/skeleton-navigation/tree/master/skeleton-es2016/src))
+- Navigation
 
 ## Build tasks
 

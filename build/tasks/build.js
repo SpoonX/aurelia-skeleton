@@ -1,87 +1,68 @@
-var gulp            = require('gulp'),
-    runSequence     = require('run-sequence'),
-    changed         = require('gulp-changed'),
-    plumber         = require('gulp-plumber'),
-    to5             = require('gulp-babel'),
-    removeCode      = require('gulp-remove-code'),
-    less            = require('gulp-less'),
-    sourcemaps      = require('gulp-sourcemaps'),
-    paths           = require('../paths'),
-    fs              = require('fs'),
-    utils           = require('../utils.js'),
-    path            = require('path'),
-    compilerOptions = require('../babel-options'),
-    assign          = Object.assign || require('object.assign'),
-    notify          = require("gulp-notify");
+var gulp            = require('gulp');
+var runSequence     = require('run-sequence');
+var changed         = require('gulp-changed');
+var plumber         = require('gulp-plumber');
+var to5             = require('gulp-babel');
+var sourcemaps      = require('gulp-sourcemaps');
+var paths           = require('../paths');
+var compilerOptions = require('../babel-options');
+var assign          = Object.assign || require('object.assign');
+var notify          = require('gulp-notify');
+var less            = require('gulp-less');
+var outputScripts, outputStyles;
 
-gulp.task('build-index', function () {
-  return gulp.src(paths.index).pipe(gulp.dest(paths.devRoot));
-});
-
-gulp.task('build-config', function () {
-  return gulp.src(paths.config).pipe(gulp.dest(paths.devRoot));
-});
-
-gulp.task('build-images', function () {
-  return gulp.src(utils.makeMatchPath('images')).pipe(gulp.dest(utils.makeOutputPath('images')));
-});
-
-gulp.task('build-locales', function () {
-  return gulp.src(utils.makeMatchPath('locales')).pipe(gulp.dest(utils.makeOutputPath('locales')));
-});
-
-gulp.task('build-html', function () {
-  return gulp.src(utils.makeMatchPath('html')).pipe(gulp.dest(utils.makeOutputPath('html')));
-});
-
-gulp.task('build-jspm-dev', function () {
-  return fs.symlinkSync(paths.jspmPackages, path.join(paths.devRoot, 'jspm_packages'), 'dir');
-});
-
-gulp.task('build-jspm-bundle', function () {
-  return fs.symlinkSync(paths.jspmPackages, paths.tmpRoot + paths.sourceRoot + 'jspm_packages', 'dir');
-});
-
-gulp.task('build-jspm-dist', function () {
-  return gulp.src(path.join(paths.jspmPackages, '!(*.src)*.js*')).pipe(gulp.dest(paths.distRoot + 'jspm_packages'));
-});
-
-gulp.task('build-styles', function () {
-  var outputPath = utils.makeOutputPath('styles');
-
-  return gulp.src(utils.makeMatchPath('styles'))
-    .pipe(less({paths: paths.lessIncludes}))
-    .pipe(gulp.dest(outputPath));
-});
-
-gulp.task('build-system', function () {
-  var outputPath        = utils.makeOutputPath('scripts');
-  var removeCodeOptions = {};
-
-  removeCodeOptions[process.env.BUILD_TYPE || 'development'] = true;
-
-  return gulp.src(utils.makeMatchPath('scripts'))
-    .pipe(plumber({errorHandler: notify.onError("Error: <%= error.message %>")}))
-    .pipe(changed(outputPath, {extension: '.js'}))
-    .pipe(removeCode(removeCodeOptions))
+// transpiles changed es6 files to SystemJS format
+// the plumber() call prevents 'pipe breaking' caused
+// by errors from other gulp plugins
+// https://www.npmjs.com/package/gulp-plumber
+gulp.task('build-system', function() {
+  return gulp.src(paths.source)
+    .pipe(plumber({errorHandler: notify.onError('Error: <%= error.message %>')}))
+    .pipe(changed(outputScripts, {extension: '.js'}))
     .pipe(sourcemaps.init({loadMaps: true}))
-    .pipe(to5(assign({}, compilerOptions, {modules: 'system'})))
-    .pipe(sourcemaps.write({includeContent: true}))
-    .pipe(gulp.dest(outputPath));
+    .pipe(to5(assign({}, compilerOptions.system())))
+    .pipe(sourcemaps.write({includeContent: false, sourceRoot: '/src'}))
+    .pipe(gulp.dest(outputScripts));
 });
 
-gulp.task('build', function (callback) {
+// copies changed html files to the output directory
+gulp.task('build-html', function() {
+  return gulp.src(paths.html)
+    .pipe(changed(outputScripts, {extension: '.html'}))
+    .pipe(gulp.dest(outputScripts));
+});
+
+gulp.task('build-less', function() {
+  return gulp.src(paths.less)
+    .pipe(less({
+      paths: ['node_modules']
+    }))
+    .pipe(gulp.dest(outputStyles));
+});
+
+// this task calls the clean task (located
+// in ./clean.js), then runs the build-system
+// and build-html tasks in parallel
+// https://www.npmjs.com/package/gulp-run-sequence
+gulp.task('build', function(callback) {
+  outputScripts = paths.devRoot + paths.scripts;
+  outputStyles  = paths.devRoot + paths.styles;
+
   return runSequence(
     'clean-dev',
-    ['build-system', 'build-styles', 'build-images', 'build-locales', 'build-html', 'build-index', 'build-config'],
+    'unbundle',
+    ['build-system', 'build-html', 'build-less'],
     callback
   );
 });
 
-gulp.task('build-dev', function (callback) {
-  return runSequence('build', 'build-jspm-dev', callback);
-});
+gulp.task('build-dist', function(callback) {
+  outputScripts = paths.tmpRoot + paths.scripts;
+  outputStyles  = paths.tmpRoot + paths.styles;
 
-gulp.task('build-dist', function (callback) {
-  return runSequence('build', callback);
+  return runSequence(
+    ['clean-tmp', 'clean-dist'],
+    ['build-system', 'build-html', 'build-less'],
+    callback
+  );
 });

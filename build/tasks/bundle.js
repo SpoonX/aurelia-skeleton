@@ -1,97 +1,62 @@
-var gulp        = require('gulp'),
-    paths       = require('../paths'),
-    runSequence = require('run-sequence'),
-    bundler     = require('aurelia-bundler'),
-    config      = {
-      force: true,
-      packagePath: './.tmp',
-      bundles: {
-        "scripts/app-build": {
-          includes: [
-            'app.js',
-            'app.html!text',
-            '*/**/*.js',
-            '*.js',
-            '*.html',
-            '*/**/*.html!text',
-            '*/**/*.css!text',
-            'aurelia-bootstrapper',
-            'aurelia-fetch-client',
-            'aurelia-router',
-            'aurelia-templating-binding',
-            'aurelia-validation',
-            'aurelia-i18n',
-            'aurelia-templating-router',
-            'aurelia-loader-default',
-            'aurelia-history-browser',
-            'aurelia-templating-resources',
-            'spoonx/aurelia-orm',
-            'spoonx/aurelia-orm/component/association-select.js',
-            'spoonx/aurelia-orm/component/association-select.html!text',
-            'aurelia-validation/resources/**/*'
-          ],
-          options : {
-            inject: true,
-            minify: true
-          }
-        }
-      }
-    };
+var runSequence = require('run-sequence');
+var gulp        = require('gulp');
+var fs          = require('fs');
+var path        = require('path');
+var paths       = require('../paths');
+var bundler     = require('aurelia-bundler');
+var bundles     = require('../bundles');
 
-gulp.task('copy-package.json', function () {
-  return gulp.src('package.json').pipe(gulp.dest(paths.tmpRoot));
+var config = {
+  force:      true,
+  configPath: './src/config.js',
+  bundles:    bundles.bundles
+};
+
+gulp.task('copy-jspm', function() {
+  return gulp.src(path.join(paths.jspmPackages, '!(*.src)*.js*')).pipe(gulp.dest(paths.distRoot + 'jspm_packages'));
 });
 
-gulp.task('copy-index-dist', function () {
-  return gulp.src(paths.tmpRoot + paths.sourceRoot + 'index.html').pipe(gulp.dest(paths.distRoot));
+gulp.task('copy-config', function() {
+  return gulp.src(paths.config).pipe(gulp.dest(paths.distRoot));
 });
 
-gulp.task('copy-config-dist', function () {
-  return gulp.src(paths.tmpRoot + paths.sourceRoot + 'config.js').pipe(gulp.dest(paths.distRoot));
+gulp.task('copy-index', function() {
+  return gulp.src(paths.index).pipe(gulp.dest(paths.distRoot));
 });
 
-gulp.task('copy-styles-dist', function () {
-  return gulp.src(paths.tmpRoot + paths.sourceRoot + paths.styles.dir + '/**/*').pipe(gulp.dest(paths.distRoot + paths.styles.dir));
+gulp.task('copy-locales', function() {
+  return gulp.src(paths.root + paths.locales + '**/*.json').pipe(gulp.dest(paths.distRoot + paths.locales));
 });
 
-gulp.task('copy-images-dist', function () {
-  return gulp.src(paths.tmpRoot + paths.sourceRoot + paths.images.dir + '/**/*').pipe(gulp.dest(paths.distRoot + paths.images.dir));
+gulp.task('copy-scripts', function() {
+  return gulp.src(paths.tmpRoot + paths.scripts + 'app-build.js').pipe(gulp.dest(paths.distRoot + paths.scripts));
 });
 
-gulp.task('copy-scripts-dist', function () {
-  return gulp.src(paths.tmpRoot + paths.sourceRoot + paths.scripts.dir + '/app-build.js').pipe(gulp.dest(paths.distRoot + paths.scripts.dir));
+gulp.task('copy-styles', function() {
+  return gulp.src(paths.tmpRoot + paths.styles + '**/*').pipe(gulp.dest(paths.distRoot + paths.styles));
 });
 
-gulp.task('copy-locales-dist', function () {
-  return gulp.src(paths.tmpRoot + paths.sourceRoot + paths.locales.dir + '/**/*').pipe(gulp.dest(paths.distRoot + paths.locales.dir));
-});
-
-gulp.task('prepare-tmp', ['build-dist', 'copy-package.json'], function () {
-  return gulp.src(paths.devRoot + '**/*').pipe(gulp.dest(paths.tmpRoot + paths.sourceRoot));
-});
-
-gulp.task('run-bundler', function () {
-  return bundler.bundle(config);
-});
-
-gulp.task('bundle', function (callback) {
-  process.env.BUILD_TYPE = 'production';
-
+gulp.task('bundle', function(callback) {
   return runSequence(
-    'clean-dist',
-    'clean-tmp',
-    'prepare-tmp',
-    'build-jspm-bundle',
-    'run-bundler',
-    'build-jspm-dist',
-    'copy-index-dist',
-    'copy-config-dist',
-    'copy-styles-dist',
-    'copy-images-dist',
-    'copy-scripts-dist',
-    'copy-locales-dist',
-    'clean-dev',
+    'prepare-bundle',
+    ['copy-jspm', 'copy-config', 'copy-index', 'copy-scripts', 'copy-styles', 'copy-locales'],
     'clean-tmp',
     callback
   );
+});
+
+gulp.task('prepare-bundle', ['build-dist'], function() {
+  config.baseURL = './.tmp';
+  var srcPath    = path.resolve(__dirname + '/../../src/jspm_packages');
+  var destPath   = path.resolve(__dirname + '/../../.tmp/jspm_packages');
+
+  fs.symlinkSync(srcPath, destPath, 'dir');
+
+  return bundler.bundle(config);
+});
+
+gulp.task('unbundle', function() {
+  config.baseURL = '.';
+
+  return bundler.unbundle(config);
 });

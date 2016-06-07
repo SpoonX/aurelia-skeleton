@@ -1,13 +1,18 @@
-var gulp        = require('gulp'),
-    utils       = require('../utils'),
-    browserSync = require('browser-sync');
+var gulp = require('gulp');
+var paths = require('../paths');
+var browserSync = require('browser-sync');
 
-gulp.task('watch', ['serve'], function () {
-  gulp.watch(utils.makeWatchPath('scripts'), ['build-system', browserSync.reload]).on('change', utils.reportChange);
-  gulp.watch(utils.makeWatchPath('html'), ['build-html', browserSync.reload]).on('change', utils.reportChange);
-  gulp.watch(utils.makeWatchPath('styles'), ['build-styles', browserSync.reload]).on('change', utils.reportChange);
-  gulp.watch(utils.makeWatchPath('locales'), ['build-locales', browserSync.reload]).on('change', utils.reportChange);
-  gulp.watch(utils.makeWatchPath('images'), ['build-images', browserSync.reload]).on('change', utils.reportChange);
-  gulp.watch(utils.paths.index, ['build-index', browserSync.reload]).on('change', utils.reportChange);
-  gulp.watch(utils.paths.config, ['build-config', browserSync.reload]).on('change', utils.reportChange);
+// outputs changes to files to the console
+function reportChange(event) {
+  console.log('File ' + event.path + ' was ' + event.type + ', running tasks...');
+}
+
+// this task wil watch for changes
+// to js, html, and css files and call the
+// reportChange method. Also, by depending on the
+// serve task, it will instantiate a browserSync session
+gulp.task('watch', ['serve'], function() {
+  gulp.watch(paths.source, ['build-system', browserSync.reload]).on('change', reportChange);
+  gulp.watch(paths.html, ['build-html', browserSync.reload]).on('change', reportChange);
+  gulp.watch(paths.less, ['build-less']).on('change', reportChange);
 });
