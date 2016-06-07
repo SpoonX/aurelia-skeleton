@@ -1,0 +1,11 @@
+node_modules
+jspm_packages
+bower_components
+.idea
+.dev
+.tmp
+.DS_STORE
+/dist
+build/reports
+coverage
+test/e2e/dist
