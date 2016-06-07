@@ -1,1 +1,1 @@
-// export {SomeEntity} from 'entity/some-entity';
+// export entities here
