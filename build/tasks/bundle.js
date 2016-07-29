@@ -1,16 +1,48 @@
-var runSequence = require('run-sequence');
-var gulp        = require('gulp');
-var fs          = require('fs');
-var path        = require('path');
-var paths       = require('../paths');
-var bundler     = require('aurelia-bundler');
-var bundles     = require('../bundles');
+'use strict';
+
+const runSequence = require('run-sequence');
+const gulp        = require('gulp');
+const fs          = require('fs');
+const path        = require('path');
+const del         = require('del');
+const jspm        = require('jspm');
+const paths       = require('../paths');
+const bundler     = require('aurelia-bundler');
+const bundles     = require('../bundles');
+const resources   = require('../export.js');
 
 var config = {
   force:      true,
   configPath: './src/config.js',
   bundles:    bundles.bundles
 };
+
+function normalizeExportPaths() {
+  const pathsToNormalize = resources.normalize;
+
+  let promises =  pathsToNormalize.map(pathSet => {
+    const packageName = pathSet[ 0 ];
+    const fileList = pathSet[ 1 ];
+
+    return jspm.normalize(packageName).then((normalized) => {
+      const packagePath = normalized.substring(normalized.indexOf('jspm_packages'), normalized.lastIndexOf('.js'));
+      return fileList.map(file => paths.root + packagePath + file);
+    });
+  });
+
+  return Promise.all(promises)
+    .then((normalizedPaths) => {
+      return normalizedPaths.reduce((prev, curr) => prev.concat(curr), []);
+    });
+}
+
+gulp.task('export-normalized-resources', function() {
+  return normalizeExportPaths().then(normalizedPaths => {
+    return gulp.src(normalizedPaths, { base: paths.root })
+      .pipe(gulp.dest(paths.distRoot));
+  });
+});
+
 
 gulp.task('copy-jspm', function() {
   return gulp.src(path.join(paths.jspmPackages, '!(*.src)*.js*')).pipe(gulp.dest(paths.distRoot + 'jspm_packages'));
@@ -29,7 +61,8 @@ gulp.task('copy-locales', function() {
 });
 
 gulp.task('copy-scripts', function() {
-  return gulp.src(paths.tmpRoot + paths.scripts + 'app-build.js').pipe(gulp.dest(paths.distRoot + paths.scripts));
+  return gulp.src(paths.tmpRoot + paths.scripts + '{app-build,vendor}.js')
+  .pipe(gulp.dest(paths.distRoot + paths.scripts));
 });
 
 gulp.task('copy-styles', function() {
@@ -39,7 +72,7 @@ gulp.task('copy-styles', function() {
 gulp.task('bundle', function(callback) {
   return runSequence(
     'prepare-bundle',
-    ['copy-jspm', 'copy-config', 'copy-index', 'copy-scripts', 'copy-styles', 'copy-locales'],
+    ['copy-jspm', 'copy-config', 'copy-index', 'copy-scripts', 'copy-styles', 'copy-locales', 'export-normalized-resources'],
     'clean-tmp',
     callback
   );

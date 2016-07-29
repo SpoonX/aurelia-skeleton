@@ -18,6 +18,7 @@ module.exports = {
   devRoot:      devRoot,
   tmpRoot:      tmpRoot,
   distRoot:     distRoot,
+  clean:        [tmpRoot, devRoot, distRoot],
   config:       root + 'config.js',
   index:        root + 'index.html',
   jspmPackages: root + 'jspm_packages',
