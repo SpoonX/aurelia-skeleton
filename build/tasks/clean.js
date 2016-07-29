@@ -18,5 +18,5 @@ gulp.task('clean-dist', ['unbundle'], function () {
 });
 
 gulp.task('clean', ['unbundle'], function() {
-  return gulp.src([paths.clean]).pipe(vinylPaths(del));
+  return gulp.src(paths.clean).pipe(vinylPaths(del));
 });
